@@ -1,0 +1,7 @@
+base   yql
+author Michael Hamann
+email  michael@content-space.de
+date   2011-07-03
+name   yql plugin
+desc   A plugin for embedding results of the Yahoo! YQL query API.
+url    http://www.dokuwiki.org/plugin:yql
