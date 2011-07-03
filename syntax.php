@@ -84,6 +84,9 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
             min($renderer->meta['date']['valid']['age'],$params['refresh']) :
             $params['refresh'];
 
+        // Don't fetch the data for rendering metadata
+        if ($mode == 'metadata') return;
+
         // execute the YQL query
 
         $yql_base_url = "http://query.yahooapis.com/v1/public/yql";
