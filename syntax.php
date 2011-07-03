@@ -30,18 +30,18 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
 
 
     public function connectTo($mode) {
-        $this->Lexer->addSpecialPattern('<YQL.*>.*<\/YQL>',$mode,'plugin_yql');
+        $this->Lexer->addSpecialPattern('<YQL.*?>.*?<\/YQL>',$mode,'plugin_yql');
     }
 
     public function handle($match, $state, $pos, &$handler){
         $data = array();
-        preg_match('/<YQL ?(.*?)>(.*?)<\/YQL>/ms', $match, $components);
+        preg_match('/<YQL ?(.*)>(.*)<\/YQL>/ms', $match, $components);
 
         if ($components[1]) { // parse parameters
-            $params = explode(' ', $components[1]);
+            preg_match_all('/\s*(\S+)="([^"]*)"\s*/', $components[1], $params, PREG_SET_ORDER);
             foreach ($params as $param) {
-                list($key, $value) = explode('=', $param);
-                $value = substr($value, 1, -1);
+                array_shift($param);
+                list($key, $value) = $param;
                 switch ($key) {
                 case 'refresh':
                     $data['refresh'] = (int)$value;
@@ -105,10 +105,12 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
                         } else {
                             if (is_array($val)) {
                                 foreach ($val as $link => $title) {
-                                    $renderer->externallink($item->$link, $item->$title);
+                                    if (isset($item->$link, $item->$title))
+                                        $renderer->externallink((string)$item->$link, (string)$item->$title);
                                 }
                             } else {
-                                $renderer->cdata($item->$val);
+                                if (isset($item->$val))
+                                    $renderer->cdata((string)$item->$val);
                             }
                         }
                     }
