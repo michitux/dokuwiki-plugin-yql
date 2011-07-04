@@ -108,12 +108,18 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
                         } else {
                             if (is_array($val)) {
                                 foreach ($val as $link => $title) {
-                                    if (isset($item->$link, $item->$title))
-                                        $renderer->externallink((string)$item->$link, (string)$item->$title);
+                                    if (isset($item->$link, $item->$title) && !is_a($item->$title, 'stdClass')) {
+                                        if (is_a($item->$link, 'stdClass') && isset($item->$link->href)) {
+                                            $renderer->externallink($item->$link->href, (string)$item->$title);
+                                        } else if (!is_a($item->$link, 'stdClass')) {
+                                            $renderer->externallink($item->$link, (string)$item->$title);
+                                        }
+                                    }
                                 }
                             } else {
-                                if (isset($item->$val))
+                                if (isset($item->$val) && !is_a($item->$val, 'stdClass')) {
                                     $renderer->cdata((string)$item->$val);
+                                }
                             }
                         }
                     }
