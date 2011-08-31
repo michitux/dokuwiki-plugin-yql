@@ -49,13 +49,13 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
                 case 'format':
                     $parts = explode('%%', $value);
                     foreach ($parts as $pos => $part) {
-                        if ($pos % 2 == 0) {
+                        if ($pos % 2 == 0) { // the start and every second part is pure character data
                             $data['format'][] = $part;
-                        } else {
-                            if (strpos($part, '|') !== FALSE) {
+                        } else { // this is the stuff inside %% %%
+                            if (strpos($part, '|') !== FALSE) { // is this a link?
                                 list($link, $title) = explode('|', $part, 2);
                                 $data['format'][] = array($link => $title);
-                            } else {
+                            } else { // if not just store the name, we'll recognize that again because of the position
                                 $data['format'][] = $part;
                             }
                         }
@@ -69,6 +69,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
         }
 
         $data['query'] = $components[2];
+        // set default values
         if (!isset($data['refresh'])) $data['refresh'] = 14400;
         if (!isset($data['format'])) $data['format'] = array('', array('link' => 'title'), '');
         if (!isset($data['item_name'])) $data['item_name'] = 'item';
@@ -85,6 +86,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
             $params['refresh'];
 
         // Don't fetch the data for rendering metadata
+        // But still do it for all other modes in order to support different renderers
         if ($mode == 'metadata') return;
 
         // execute the YQL query
@@ -93,44 +95,103 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
         $yql_query_url = $yql_base_url . "?q=" . urlencode($query);
         $yql_query_url .= "&format=json";
         $client = new DokuHTTPClient();
-        $result = $client->get($yql_query_url);
-        if ($result !== false) {
-            $json_parser = new JSON();
-            $json_result = $json_parser->decode($result);
-            if (!is_null($json_result->query->results)) {
-                $renderer->listu_open();
-                foreach ($json_result->query->results->$item_name as $item) {
-                    $renderer->listitem_open(1);
-                    $renderer->listcontent_open();
-                    foreach ($format as $pos => $val) {
-                        if ($pos % 2 == 0) {
-                            $renderer->cdata($val);
-                        } else {
-                            if (is_array($val)) {
-                                foreach ($val as $link => $title) {
-                                    if (isset($item->$link, $item->$title) && !is_a($item->$title, 'stdClass')) {
-                                        if (is_a($item->$link, 'stdClass') && isset($item->$link->href)) {
-                                            $renderer->externallink($item->$link->href, (string)$item->$title);
-                                        } else if (!is_a($item->$link, 'stdClass')) {
-                                            $renderer->externallink($item->$link, (string)$item->$title);
-                                        }
-                                    }
-                                }
-                            } else {
-                                if (isset($item->$val) && !is_a($item->$val, 'stdClass')) {
-                                    $renderer->cdata((string)$item->$val);
-                                }
-                            }
-                        }
-                    }
-                    $renderer->listcontent_close();
-                    $renderer->listitem_close();
-                }
-                $renderer->listu_close();
-            }
+        $result = $client->sendRequest($yql_query_url);
+
+        if ($result === false) {
+            $this->render_error($renderer, 'YQL: Error: the request to the server failed: '.$client->error);
+            return;
         }
 
+        $json_parser = new JSON();
+        $json_result = $json_parser->decode($client->resp_body);
+
+        // catch YQL errors
+        if (isset($json_result->error)) {
+            $this->render_error($renderer, 'YQL: YQL Error: '.$json_result->error->description);
+            return;
+        }
+
+        if (is_null($json_result->query->results)) {
+            $this->render_error($renderer, 'YQL: Unknown error: there is neither an error nor results in the YQL result.');
+            return;
+        }
+
+        if (!isset($json_result->query->results->$item_name)) {
+            $this->render_error($renderer, 'YQL: Error: The item name '.$item_name.' doesn\'t exist in the results');
+            return;
+        }
+
+        $renderer->listu_open();
+        foreach ($json_result->query->results->$item_name as $item) {
+            $renderer->listitem_open(1);
+            $renderer->listcontent_open();
+            foreach ($format as $pos => $val) {
+                if ($pos % 2 == 0) { // outside %% %%, just character data
+                    $renderer->cdata($val);
+                } else { // inside %% %%, either links or other fields
+                    if (is_array($val)) { // arrays are links
+                        foreach ($val as $link => $title) {
+                            // check if there is a link at all and if the title isn't an instance of stdClass (can't be casted to string)
+                            if (!isset($item->$link)) {
+                                $this->render_error($renderer, 'YQL: Error: The given attribute '.$link.' doesn\'t exist');
+                                continue;
+                            }
+
+                            if (!isset($item->$title)) {
+                                $this->render_error($renderer, 'YQL: Error: The given attribute '.$title.' doesn\'t exist');
+                                continue;
+                            }
+
+                            if ($item->$title instanceof stdClass) {
+                                $this->render_error($renderer, 'YQL: Error: The given attribute '.$title.' is not a simple string but an object');
+                                continue;
+                            }
+
+                            // links can be objects, then they should have an attribute "href" which contains the actual url
+                            if ($item->$link instanceof stdClass && !isset($item->$link->href)) {
+                                $this->render_error($renderer, 'YQL: Error: The given attribute '.$link.' is not a simple string but also doesn\'t have a href attribute as link objects have.');
+                                continue;
+                            }
+
+                            if ($item->$link instanceof stdClass) {
+                                $renderer->externallink($item->$link->href, (string)$item->$title);
+                            } else {
+                                $renderer->externallink($item->$link, (string)$item->$title);
+                            }
+                        }
+                    } else { // just a field
+                        // test if the value really exists and if isn't a stdClass (can't be casted to string)
+                        if (!isset($item->$val)) {
+                            $this->render_error($renderer, 'YQL: Error: The given attribute '.$val.' doesn\'t exist');
+                            continue;
+                        }
+
+                        if ($item->$val instanceof stdClass) {
+                            $this->render_error($renderer, 'YQL: Error: The given attribute '.$val.' is not a simple string but an object');
+                            continue;
+                        }
+
+                        $renderer->cdata((string)$item->$val);
+                    }
+                }
+            }
+            $renderer->listcontent_close();
+            $renderer->listitem_close();
+        }
+        $renderer->listu_close();
+
         return true;
+    }
+
+    /**
+     * Helper function for displaying error messages. Currently just adds a paragraph with emphasis and the error message in it
+     */
+    private function render_error($renderer, $error) {
+        $renderer->p_open();
+        $renderer->emphasis_open();
+        $renderer->cdata($error);
+        $renderer->emphasis_close();
+        $renderer->p_close();
     }
 }
 
