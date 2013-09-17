@@ -110,12 +110,12 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
     /**
      * Handles the actual output creation.
      *
-     * @param   $format   string        output format being rendered
+     * @param   $mode     string        output format being rendered
      * @param   $renderer Doku_Renderer reference to the current renderer object
      * @param   $data     array         data created by handler()
      * @return  boolean                 rendered correctly?
      */
-    public function render($format, Doku_Renderer $renderer, $data) {
+    public function render($mode, Doku_Renderer $renderer, $data) {
         $refresh = $data['referesh'];
         $format  = $data['format'];
         $item_name = $data['item_name'];
@@ -123,7 +123,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
 
         // Don't fetch the data for rendering metadata
         // But still do it for all other modes in order to support different renderers
-        if ($format == 'metadata') {
+        if ($mode == 'metadata') {
             /** @var $renderer Doku_Renderer_metadata */
             $renderer->meta['date']['valid']['age'] =
                 isset($renderer->meta['date']['valid']['age']) ?
