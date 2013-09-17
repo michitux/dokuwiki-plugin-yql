@@ -61,7 +61,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
      * @param   int          $state   The lexer state for the match
      * @param   int          $pos     The character position of the matched text
      * @param   Doku_Handler $handler Reference to the Doku_Handler object
-     * @return  array Return an array with all data you want to use in render
+     * @return  array The data that shall be passed to render()
      */
     public function handle($match, $state, $pos, &$handler){
         $data = array();
@@ -129,7 +129,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
                 isset($renderer->meta['date']['valid']['age']) ?
                     min($renderer->meta['date']['valid']['age'],$refresh) :
                     $refresh;
-            return false;
+            return true;
         }
 
         // execute the YQL query
