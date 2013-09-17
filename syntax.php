@@ -120,7 +120,6 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
         $format  = $data['format'];
         $item_name = $data['item_name'];
         $query   = $data['query'];
-        extract($data);
 
         // Don't fetch the data for rendering metadata
         // But still do it for all other modes in order to support different renderers
