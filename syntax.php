@@ -105,7 +105,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
 
         if ($result === false) {
             $this->render_error($renderer, 'YQL: Error: the request to the server failed: '.$client->error);
-            return;
+            return true;
         }
 
         $json_parser = new JSON();
@@ -114,17 +114,17 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
         // catch YQL errors
         if (isset($json_result->error)) {
             $this->render_error($renderer, 'YQL: YQL Error: '.$json_result->error->description);
-            return;
+            return true;
         }
 
         if (is_null($json_result->query->results)) {
             $this->render_error($renderer, 'YQL: Unknown error: there is neither an error nor results in the YQL result.');
-            return;
+            return true;
         }
 
         if (!isset($json_result->query->results->$item_name)) {
             $this->render_error($renderer, 'YQL: Error: The item name '.$item_name.' doesn\'t exist in the results');
-            return;
+            return true;
         }
 
         $renderer->listu_open();
