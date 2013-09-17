@@ -78,16 +78,22 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
     }
 
     public function render($mode, &$renderer, $data) {
+        $refresh = $data['referesh'];
+        $format  = $data['format'];
+        $item_name = $data['item_name'];
+        $query   = $data['query'];
         extract($data);
-
-        $renderer->meta['date']['valid']['age'] =
-            isset($renderer->meta['date']['valid']['age']) ?
-            min($renderer->meta['date']['valid']['age'],$params['refresh']) :
-            $params['refresh'];
 
         // Don't fetch the data for rendering metadata
         // But still do it for all other modes in order to support different renderers
-        if ($mode == 'metadata') return;
+        if ($format == 'metadata') {
+            /** @var $renderer Doku_Renderer_metadata */
+            $renderer->meta['date']['valid']['age'] =
+                isset($renderer->meta['date']['valid']['age']) ?
+                    min($renderer->meta['date']['valid']['age'],$refresh) :
+                    $refresh;
+            return false;
+        }
 
         // execute the YQL query
 
