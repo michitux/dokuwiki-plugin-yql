@@ -13,26 +13,56 @@ if (!defined('DOKU_LF')) define('DOKU_LF', "\n");
 if (!defined('DOKU_TAB')) define('DOKU_TAB', "\t");
 if (!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 
-require_once DOKU_PLUGIN.'syntax.php';
-
+/**
+ * The YQL syntax plugin
+ */
 class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
+    /**
+     * Syntax Type
+     * @return string The type
+     */
     public function getType() {
         return 'substition';
     }
 
+    /**
+     * Paragraph Type
+     *
+     * Defines how this syntax is handled regarding paragraphs:
+     * 'block'  - Open paragraphs need to be closed before plugin output
+     * @return string The paragraph type
+     * @see Doku_Handler_Block
+     */
     public function getPType() {
         return 'block';
     }
 
+    /**
+     * @return int The sort order
+     */
     public function getSort() {
         return 120;
     }
 
 
+    /**
+     * Connect the plugin to the parser modes
+     *
+     * @param string $mode The current mode
+     */
     public function connectTo($mode) {
         $this->Lexer->addSpecialPattern('<YQL.*?>.*?<\/YQL>',$mode,'plugin_yql');
     }
 
+    /**
+     * Handler to prepare matched data for the rendering process
+     *
+     * @param   string       $match   The text matched by the patterns
+     * @param   int          $state   The lexer state for the match
+     * @param   int          $pos     The character position of the matched text
+     * @param   Doku_Handler $handler Reference to the Doku_Handler object
+     * @return  array Return an array with all data you want to use in render
+     */
     public function handle($match, $state, $pos, &$handler){
         $data = array();
         preg_match('/<YQL ?(.*)>(.*)<\/YQL>/ms', $match, $components);
@@ -77,7 +107,15 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
         return $data;
     }
 
-    public function render($mode, &$renderer, $data) {
+    /**
+     * Handles the actual output creation.
+     *
+     * @param   $format   string        output format being rendered
+     * @param   $renderer Doku_Renderer reference to the current renderer object
+     * @param   $data     array         data created by handler()
+     * @return  boolean                 rendered correctly?
+     */
+    public function render($format, Doku_Renderer $renderer, $data) {
         $refresh = $data['referesh'];
         $format  = $data['format'];
         $item_name = $data['item_name'];
@@ -192,7 +230,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
     /**
      * Helper function for displaying error messages. Currently just adds a paragraph with emphasis and the error message in it
      */
-    private function render_error($renderer, $error) {
+    private function render_error(Doku_Renderer $renderer, $error) {
         $renderer->p_open();
         $renderer->emphasis_open();
         $renderer->cdata($error);
