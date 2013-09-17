@@ -116,7 +116,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
      * @return  boolean                 rendered correctly?
      */
     public function render($mode, Doku_Renderer $renderer, $data) {
-        $refresh = $data['referesh'];
+        $refresh = $data['refresh'];
         $format  = $data['format'];
         $item_name = $data['item_name'];
         $query   = $data['query'];
