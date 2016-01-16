@@ -63,7 +63,7 @@ class syntax_plugin_yql extends DokuWiki_Syntax_Plugin {
      * @param   Doku_Handler $handler Reference to the Doku_Handler object
      * @return  array The data that shall be passed to render()
      */
-    public function handle($match, $state, $pos, &$handler){
+    public function handle($match, $state, $pos, Doku_Handler $handler){
         $data = array();
         preg_match('/<YQL ?(.*)>(.*)<\/YQL>/ms', $match, $components);
 
